@@ -11,7 +11,7 @@ type Env = [(Vars,Value)]
 
 data AExpr = Var Vars | Const Value | Add AExpr AExpr | Mul AExpr AExpr
            | Sub AExpr AExpr | Div AExpr AExpr | Mod AExpr AExpr
-           | Exp AExpr AExpr
+           | Exp AExpr AExpr | Error String
   deriving Show
 
 --           'G'    'Q'   'P'   'C'   'F'
@@ -52,8 +52,8 @@ readAExpr = parseAExpr . lexer
 parseAExpr :: [Token] -> AExpr
 parseAExpr s = case sr [] s of
   [PA e]  -> e
-  [Err e] -> error $ "Lexical error: " ++ e
-  s       -> error $ "Parse error: " ++ show s
+  [Err e] -> Error $ "Lexical error: " ++ e
+  s       -> Error $ "Parse error: " ++ show s
 
 sr :: [Token] -> [Token] -> [Token]
 -- reduce phase
@@ -110,6 +110,7 @@ lexer s = [Err s]
 -- This is the eval for Aexpr
 eval :: Env -> AExpr -> Value
 eval env (Var x) = maybe (error "Variable not found") id (lookup x env)
+eval env (Error s) = error $ "You shouldn't get here."
 eval env (Const n) = n
 eval env (Add e1 e2) = eval env e1 + eval env e2
 eval env (Mul e1 e2) = eval env e1 * eval env e2
@@ -199,6 +200,11 @@ repl env input = do
       repl ((x,newval):env) ""
     ts -> do
       let parsed = parseAExpr lexed
-      let evaled = eval env parsed
-      let output = show evaled
-      output
+      case parsed of
+        (Error s) -> s
+        xs -> do
+                let evaled = eval env parsed
+                let output = show evaled
+                output
+
+
